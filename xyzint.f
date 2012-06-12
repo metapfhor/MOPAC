@@ -416,41 +416,46 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
    10 RCOS=0.0D0
       RETURN
       END
-      SUBROUTINE SETRADI(I,J,JINIT,R)
+      SUBROUTINE SETRADI(XYZ,I,J,R,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
-      DOUBLE PRECISION SEP(3),SC
-      DIMENSION I(3),J(3),JINIT(3)
+      DOUBLE PRECISION DEL(3),SC
+      DIMENSION XYZ(3,*),ATMS(*)
 **********************************************
 *       SETS THE DISTANCE BETWEEN TWO ATOMS TO THE SPECIFIED LENGTH
 *       THE SECOND ATOM WILL MOVE ALONG THE SEPARATION VECTOR
 **********************************************
-      SC=R/SQRT((I(1)-JINIT(1))**2+(I(2)-JINIT(2))**2+
-     1 (I(3)-JINIT(3))**2)
-      I(1)=J(1)+SC*(I(1)-JINIT(1))
-      I(2)=J(2)+SC*(I(2)-JINIT(2))
-      I(3)=J(3)+SC*(I(3)-JINIT(3))
+      SC=SQRT((XYZ(1,I)-XYZ(1,J))**2+(XYZ(2,I)-XYZ(2,J))**2+
+     1 (XYZ(3,I)-XYZ(3,J))**2)
+      SC=(1-R/SC)*SC
+      DEL(1)=SC*(XYZ(1,I)-XYZ(1,J))
+      DEL(2)=SC*(XYZ(2,I)-XYZ(2,J))
+      DEL(3)=SC*(XYZ(3,I)-XYZ(3,J))
+      DO 10 II=1,SIZE(ATMS,1)
+        XYZ(1,ATMS(II))=XYZ(1,ATMS(II))+DEL(1)
+        XYZ(2,ATMS(II))=XYZ(2,ATMS(II))+DEL(2)
+        XYZ(3,ATMS(II))=XYZ(3,ATMS(II))+DEL(3)
+   10  CONTINUE
       RETURN
       END
-      SUBROUTINE SETBANG(I,J,K,ANGL)
+      SUBROUTINE SETBANG(XYZ,I,J,K,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
-      DOUBLE PRECISION XP(3),YP(3),R,LN,C,S
-      DIMENSION I(3),J(3),K(3)
+      DOUBLE PRECISION XP(3),YP(3),R,LN,C,S,DEL
+      DIMENSION XYZ(3,*)
 **********************************************
 *       SETS THE BOND ANGLE BETWEEN THREE ATOMS
 *       THIS WILL FAIL IF THE ATOMS ARE QUASI-COLINEAR
 **********************************************
-      C=COS(ANGL)
-      S=SIN(ANGL)
-      YP(1)=I(1)-J(1)
-      YP(2)=I(2)-J(2)
-      YP(3)=I(3)-J(3)
-      R=SQRT(YP(1)**2+YP(2)**2+YP(3)**2)
-      YP(1)=YP(1)/R
-      YP(2)=YP(2)/R
-      YP(3)=YP(3)/R
-      XP(1)=K(1)-J(1)
-      XP(2)=K(2)-J(2)
-      XP(3)=K(3)-J(3)
+
+      YP(1)=XYZ(1,I)-XYZ(1,J)
+      YP(2)=XYZ(2,I)-XYZ(2,J)
+      YP(3)=XYZ(3,I)-XYZ(3,J)
+      LN=SQRT(YP(1)**2+YP(2)**2+YP(3)**2)
+      YP(1)=YP(1)/LN
+      YP(2)=YP(2)/LN
+      YP(3)=YP(3)/LN
+      XP(1)=XYZ(1,K)-XYZ(1,J)
+      XP(2)=XYZ(2,K)-XYZ(2,J)
+      XP(3)=XYZ(3,K)-XYZ(3,J)
       LN=SQRT(XP(1)**2+XP(2)**2+XP(3)**2)
       XP(1)=XP(1)/LN
       XP(2)=XP(2)/LN
@@ -463,37 +468,42 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       YP(1)=YP(1)/LN
       YP(2)=YP(2)/LN
       YP(3)=YP(3)/LN
-      I(1)=J(1)+R*(C*XP(1)+S*YP(1))
-      I(2)=J(2)+R*(C*XP(2)+S*YP(2))
-      I(3)=J(3)+R*(C*XP(3)+S*YP(3))
+      BANGL(XYZ,I,J,K,DEL)
+      DEL=ANGL-DEL
+      DO 10 II=1,SIZE(ATMS,1)
+        BANGL(XYZ,I,J,ATMS(II),LN)
+        LN=LN+DEL
+        C=COS(LN)
+        S=SIN(LN)
+        R=SQRT((XYZ(1,ATMS(II))-XYZ(1,J))**2+(XYZ(2,ATMS(II))-XYZ(2,J))
+     1   **2+(XYZ(3,ATMS(II))-XYZ(3,J))**2)
+        XYZ(1,ATMS(II))=J(1)+R*(C*XP(1)+S*YP(1))
+        XYZ(2,ATMS(II))=J(2)+R*(C*XP(2)+S*YP(2))
+        XYZ(3,ATMS(II))=J(3)+R*(C*XP(3)+S*YP(3))
+   10  CONTINUE
+
+
       RETURN
       END
-      SUBROUTINE SETDIHD(I,J,K,L,ANGL)
+      SUBROUTINE SETDIHD(I,J,K,L,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
-      DOUBLE PRECISION OP(3),XP(3),YP(3),ZP(3),JI(3),R,LN,C,S
-      DIMENSION I(3),J(3),K(3),L(3)
+      DOUBLE PRECISION OP(3),XP(3),YP(3),ZP(3),JI(3),R,LN,C,S,DEL
+      DIMENSION I(3),J(3),K(3),L(3),ATMS(3,*)
 **********************************************************************
 *       SETS THE DIHERDAL ANGLE OF THE IJK PLANE WRT JKL TO THAT SPECIFIED
 **********************************************************************
       C=COS(ANGL)
       S=SIN(ANGL)
-      ZP(1)=J(1)-K(1)
-      ZP(2)=J(2)-K(2)
-      ZP(3)=J(3)-K(3)
+      ZP(1)=XYZ(1,J)-XYZ(1,K)
+      ZP(2)=XYZ(2,J)-XYZ(2,K)
+      ZP(3)=XYZ(3,J)-XYZ(3,K)
       LN=SQRT(ZP(1)**2+ZP(2)**2+ZP(3)**2)
       ZP(1)=ZP(1)/LN
       ZP(2)=ZP(2)/LN
       ZP(3)=ZP(3)/LN
-      JI(1)=I(1)-J(1)
-      JI(2)=I(2)-J(2)
-      JI(3)=I(3)-J(3)
-      LN=DOT_PRODUCT(JI,ZP)
-      OP(1)=J(1)+ZP(1)*LN
-      OP(2)=J(2)+ZP(2)*LN
-      OP(3)=J(3)+ZP(3)*LN
-      XP(1)=L(1)-K(1)
-      XP(2)=L(2)-K(2)
-      XP(3)=L(3)-K(3)
+      XP(1)=XYZ(1,L)-XYZ(1,K)
+      XP(2)=XYZ(2,L)-XYZ(2,K)
+      XP(3)=XYZ(3,L)-XYZ(3,K)
       LN=DOT_PRODUCT(XP,ZP)
       XP(1)=XP(1)-LN*ZP(1)
       XP(2)=XP(2)-LN*ZP(2)
@@ -505,9 +515,28 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       YP(1)=ZP(2)*XP(3)-ZP(3)*XP(2)
       YP(2)=ZP(3)*XP(1)-ZP(1)*ZP(3)
       YP(3)=ZP(1)*XP(2)-ZP(2)*XP(1)
-      R=SQRT((OP(1)-I(1))**2+(OP(2)-I(2))**2+(OP(3)-I(3))**2)
-      I(1)=OP(1)+R*(C*XP(1)+S*YP(1))
-      I(2)=OP(2)+R*(C*XP(2)+S*YP(2))
-      I(3)=OP(3)+R*(C*XP(3)+S*YP(3))
+      DIHED(XYZ,I,J,K,L,DEL)
+      DEL=ANGL-DEL
+      DO 10 II=1,SIZE(ATMS,1)
+        JI(1)=XYZ(1,ATMS(II))-XYZ(1,J)
+        JI(2)=XYZ(2,ATMS(II))-XYZ(2,J)
+        JI(3)=XYZ(3,ATMS(II))-XYZ(3,J)
+        LN=DOT_PRODUCT(JI,ZP)
+        OP(1)=XYZ(1,J)+ZP(1)*LN
+        OP(2)=XYZ(2,J)+ZP(2)*LN
+        OP(3)=XYZ(3,J)+ZP(3)*LN
+        R=SQRT((OP(1)-XYZ(1,ATMS(II)))**2+(OP(2)-XYZ(2,ATMS(II)))**2
+     1   +(OP(3)-XYZ(3,ATMS(II))**2)
+        DIHED(XYZ,I,J,K,ATMS(II),LN)
+        LN=LN+DEL
+        C=COS(LN)
+        S=SIN(LN)
+        XYZ(1,ATMS(II))=OP(1)+R*(C*XP(1)+S*YP(1))
+        XYZ(2,ATMS(II)=OP(2)+R*(C*XP(2)+S*YP(2))
+        XYZ(3,ATMS(II)=OP(3)+R*(C*XP(3)+S*YP(3))
+   10  CONTINUE
+
+
+
       RETURN
       END
