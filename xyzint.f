@@ -152,18 +152,18 @@ C
    50  CONTINUE
 
         DO 60 I=1,NUMATM
-            IF(IVAL(1,I).NE.INFINT)THEN
-            CALL SETRADI(XYZ(:,I),XYZ(:,NA(I)),XYZINIT(:,NA(I)),
-     1       IVAL(1,I))
-            ENDIF
-            IF(IVAL(2,I).NE.INFINT)THEN
-            CALL SETBANG(XYZ(:,I),XYZ(:,NA(I)),XYZ(:,NB(I)),
-     1       IVAL(2,I)/DEGREE)
-            ENDIF
-            IF(IVAL(3,I).NE.INFINT)THEN
-            CALL SETDIHD(XYZ(:,I),XYZ(:,NA(I)),XYZ(:,NB(I)),
-     1       XYZ(:,NC(I)),IVAL(3,I)/DEGREE)
-            ENDIF
+C            IF(IVAL(1,I).NE.INFINT)THEN
+C            CALL SETRADI(XYZ(:,I),XYZ(:,NA(I)),XYZINIT(:,NA(I)),
+C     1       IVAL(1,I))
+C            ENDIF
+C            IF(IVAL(2,I).NE.INFINT)THEN
+C            CALL SETBANG(XYZ(:,I),XYZ(:,NA(I)),XYZ(:,NB(I)),
+C     1       IVAL(2,I)/DEGREE)
+C            ENDIF
+C            IF(IVAL(3,I).NE.INFINT)THEN
+C            CALL SETDIHD(XYZ(:,I),XYZ(:,NA(I)),XYZ(:,NB(I)),
+C     1       XYZ(:,NC(I)),IVAL(3,I)/DEGREE)
+C            ENDIF
    60   CONTINUE
         APPLIED=.TRUE.
       ENDIF
@@ -419,7 +419,8 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       SUBROUTINE SETRADI(XYZ,I,J,R,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
       DOUBLE PRECISION DEL(3),SC
-      DIMENSION XYZ(3,*),ATMS(*)
+      INTEGER ATMS(1,*)
+      DIMENSION XYZ(3,*)
 **********************************************
 *       SETS THE DISTANCE BETWEEN TWO ATOMS TO THE SPECIFIED LENGTH
 *       THE SECOND ATOM WILL MOVE ALONG THE SEPARATION VECTOR
@@ -431,15 +432,16 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       DEL(2)=SC*(XYZ(2,I)-XYZ(2,J))
       DEL(3)=SC*(XYZ(3,I)-XYZ(3,J))
       DO 10 II=1,SIZE(ATMS,1)
-        XYZ(1,ATMS(II))=XYZ(1,ATMS(II))+DEL(1)
-        XYZ(2,ATMS(II))=XYZ(2,ATMS(II))+DEL(2)
-        XYZ(3,ATMS(II))=XYZ(3,ATMS(II))+DEL(3)
+        XYZ(1,ATMS(1,II))=XYZ(1,ATMS(1,II))+DEL(1)
+        XYZ(2,ATMS(1,II))=XYZ(2,ATMS(1,II))+DEL(2)
+        XYZ(3,ATMS(1,II))=XYZ(3,ATMS(1,II))+DEL(3)
    10  CONTINUE
       RETURN
       END
       SUBROUTINE SETBANG(XYZ,I,J,K,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
       DOUBLE PRECISION XP(3),YP(3),R,LN,C,S,DEL
+      INTEGER ATMS(1,*)
       DIMENSION XYZ(3,*)
 **********************************************
 *       SETS THE BOND ANGLE BETWEEN THREE ATOMS
@@ -468,27 +470,29 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       YP(1)=YP(1)/LN
       YP(2)=YP(2)/LN
       YP(3)=YP(3)/LN
-      BANGL(XYZ,I,J,K,DEL)
+      CALL BANGLE(XYZ,I,J,K,DEL)
       DEL=ANGL-DEL
       DO 10 II=1,SIZE(ATMS,1)
-        BANGL(XYZ,I,J,ATMS(II),LN)
+        CALL BANGLE(XYZ,I,J,ATMS(1,II),LN)
         LN=LN+DEL
         C=COS(LN)
         S=SIN(LN)
-        R=SQRT((XYZ(1,ATMS(II))-XYZ(1,J))**2+(XYZ(2,ATMS(II))-XYZ(2,J))
-     1   **2+(XYZ(3,ATMS(II))-XYZ(3,J))**2)
-        XYZ(1,ATMS(II))=J(1)+R*(C*XP(1)+S*YP(1))
-        XYZ(2,ATMS(II))=J(2)+R*(C*XP(2)+S*YP(2))
-        XYZ(3,ATMS(II))=J(3)+R*(C*XP(3)+S*YP(3))
+        R=SQRT((XYZ(1,ATMS(1,II))-XYZ(1,J))**2+
+     2   (XYZ(2,ATMS(1,II))-XYZ(2,J))**2+
+     3   (XYZ(3,ATMS(1,II))-XYZ(3,J))**2)
+        XYZ(1,ATMS(1,II))=XYZ(1,J)+(R*(C*XP(1)+S*YP(1)))
+        XYZ(2,ATMS(1,II))=XYZ(2,J)+(R*(C*XP(2)+S*YP(2)))
+        XYZ(3,ATMS(1,II))=XYZ(3,J)+(R*(C*XP(3)+S*YP(3)))
    10  CONTINUE
 
 
       RETURN
       END
-      SUBROUTINE SETDIHD(I,J,K,L,ANGL,ATMS)
+      SUBROUTINE SETDIHD(XYZ,I,J,K,L,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
       DOUBLE PRECISION OP(3),XP(3),YP(3),ZP(3),JI(3),R,LN,C,S,DEL
-      DIMENSION I(3),J(3),K(3),L(3),ATMS(3,*)
+      INTEGER ATMS(1,*)
+      DIMENSION XYZ(3,*)
 **********************************************************************
 *       SETS THE DIHERDAL ANGLE OF THE IJK PLANE WRT JKL TO THAT SPECIFIED
 **********************************************************************
@@ -515,25 +519,25 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       YP(1)=ZP(2)*XP(3)-ZP(3)*XP(2)
       YP(2)=ZP(3)*XP(1)-ZP(1)*ZP(3)
       YP(3)=ZP(1)*XP(2)-ZP(2)*XP(1)
-      DIHED(XYZ,I,J,K,L,DEL)
+      CALL DIHED(XYZ,I,J,K,L,DEL)
       DEL=ANGL-DEL
       DO 10 II=1,SIZE(ATMS,1)
-        JI(1)=XYZ(1,ATMS(II))-XYZ(1,J)
-        JI(2)=XYZ(2,ATMS(II))-XYZ(2,J)
-        JI(3)=XYZ(3,ATMS(II))-XYZ(3,J)
+        JI(1)=XYZ(1,ATMS(1,II))-XYZ(1,J)
+        JI(2)=XYZ(2,ATMS(1,II))-XYZ(2,J)
+        JI(3)=XYZ(3,ATMS(1,II))-XYZ(3,J)
         LN=DOT_PRODUCT(JI,ZP)
         OP(1)=XYZ(1,J)+ZP(1)*LN
         OP(2)=XYZ(2,J)+ZP(2)*LN
         OP(3)=XYZ(3,J)+ZP(3)*LN
-        R=SQRT((OP(1)-XYZ(1,ATMS(II)))**2+(OP(2)-XYZ(2,ATMS(II)))**2
-     1   +(OP(3)-XYZ(3,ATMS(II))**2)
-        DIHED(XYZ,I,J,K,ATMS(II),LN)
+        R=SQRT((OP(1)-XYZ(1,ATMS(1,II)))**2+(OP(2)-XYZ(2,ATMS(1,II)))**2
+     1   +(OP(3)-XYZ(3,ATMS(1,II)))**2)
+        CALL DIHED(XYZ,I,J,K,ATMS(1,II),LN)
         LN=LN+DEL
         C=COS(LN)
         S=SIN(LN)
-        XYZ(1,ATMS(II))=OP(1)+R*(C*XP(1)+S*YP(1))
-        XYZ(2,ATMS(II)=OP(2)+R*(C*XP(2)+S*YP(2))
-        XYZ(3,ATMS(II)=OP(3)+R*(C*XP(3)+S*YP(3))
+        XYZ(1,ATMS(1,II))=OP(1)+R*(C*XP(1)+S*YP(1))
+        XYZ(2,ATMS(1,II))=OP(2)+R*(C*XP(2)+S*YP(2))
+        XYZ(3,ATMS(1,II))=OP(3)+R*(C*XP(3)+S*YP(3))
    10  CONTINUE
 
 
