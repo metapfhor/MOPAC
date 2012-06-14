@@ -29,7 +29,7 @@
       COMMON /NUMCAL/ NUMCAL
 C             Laurent Modification: added
       COMMON /AXES / XHAT(3),YHAT(3),ZHAT(3),OFF(3),ATOT(3,3)
-      COMMON /CNSTR / ICONXN(6,NUMATM),IVAL, APPLIED, INFINT
+      COMMON /CNSTR / ICONXN(6,NUMATM), APPLIED, INFINT
       DOUBlE PRECISION DX, DY, DZ, IVAL(3,NUMATM), INFINT,
      1  XYZINIT(3,NUMATM)
 
@@ -312,7 +312,7 @@ C       Laurent End
 *
 * BANGLE CALCULATES THE ANGLE BETWEEN ATOMS I,J, AND K. THE
 *        CARTESIAN COORDINATES ARE IN XYZ.
-*
+*IVAL,
 *********************************************************************
       D2IJ = (XYZ(1,I)-XYZ(1,J))**2+
      1       (XYZ(2,I)-XYZ(2,J))**2+
@@ -440,14 +440,13 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       END
       SUBROUTINE SETBANG(XYZ,I,J,K,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
-      DOUBLE PRECISION XP(3),YP(3),R,LN,C,S,DEL
+      DOUBLE PRECISION XP(3),YP(3),ZP(3),OP(3),JII(3),R,LN,C,S,DEL
       INTEGER ATMS(1,*)
       DIMENSION XYZ(3,*)
 **********************************************
 *       SETS THE BOND ANGLE BETWEEN THREE ATOMS
 *       THIS WILL FAIL IF THE ATOMS ARE QUASI-COLINEAR
 **********************************************
-
       YP(1)=XYZ(1,I)-XYZ(1,J)
       YP(2)=XYZ(2,I)-XYZ(2,J)
       YP(3)=XYZ(3,I)-XYZ(3,J)
@@ -472,25 +471,39 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       YP(3)=YP(3)/LN
       CALL BANGLE(XYZ,I,J,K,DEL)
       DEL=ANGL-DEL
+      ZP(1)=XP(2)*YP(3)-XP(3)*YP(2)
+      ZP(2)=XP(3)*YP(1)-XP(1)*YP(3)
+      ZP(3)=XP(1)*YP(2)-XP(2)*YP(1)
+      LN=SQRT(DOT_PRODUCT(ZP,ZP))
+      ZP(1)=ZP(1)/LN
+      ZP(2)=ZP(2)/LN
+      ZP(3)=ZP(3)/LN
       DO 10 II=1,SIZE(ATMS,1)
-        CALL BANGLE(XYZ,I,J,ATMS(1,II),LN)
-        LN=LN+DEL
-        C=COS(LN)
-        S=SIN(LN)
-        R=SQRT((XYZ(1,ATMS(1,II))-XYZ(1,J))**2+
+        IF(II.NE.J)THEN
+            CALL BANGLE(XYZ,I,J,ATMS(1,II),LN)
+            LN=LN+DEL
+            C=COS(LN)
+            S=SIN(LN)
+            R=SQRT((XYZ(1,ATMS(1,II))-XYZ(1,J))**2+
      2   (XYZ(2,ATMS(1,II))-XYZ(2,J))**2+
      3   (XYZ(3,ATMS(1,II))-XYZ(3,J))**2)
-        XYZ(1,ATMS(1,II))=XYZ(1,J)+(R*(C*XP(1)+S*YP(1)))
-        XYZ(2,ATMS(1,II))=XYZ(2,J)+(R*(C*XP(2)+S*YP(2)))
-        XYZ(3,ATMS(1,II))=XYZ(3,J)+(R*(C*XP(3)+S*YP(3)))
+            JII(1)=XYZ(1,ATMS(1,II))-XYZ(1,J)
+            JII(2)=XYZ(2,ATMS(1,II))-XYZ(2,J)
+            JII(3)=XYZ(3,ATMS(1,II))-XYZ(3,J)
+            LN=DOT_PRODUCT(JII,ZP)
+            OP(1)=XYZ(1,J)+ZP(1)*LN
+            OP(2)=XYZ(2,J)+ZP(2)*LN
+            OP(3)=XYZ(3,J)+ZP(3)*LN
+            XYZ(1,ATMS(1,II))=OP(1)+R*(C*XP(1)+S*YP(1))
+            XYZ(2,ATMS(1,II))=OP(2)+R*(C*XP(2)+S*YP(2))
+            XYZ(3,ATMS(1,II))=OP(3)+R*(C*XP(3)+S*YP(3))
+        ENDIF
    10  CONTINUE
-
-
       RETURN
       END
       SUBROUTINE SETDIHD(XYZ,I,J,K,L,ANGL,ATMS)
       IMPLICIT DOUBLE PRECISION (A-Z)
-      DOUBLE PRECISION OP(3),XP(3),YP(3),ZP(3),JI(3),R,LN,C,S,DEL
+      DOUBLE PRECISION OP(3),XP(3),YP(3),ZP(3),JII(3),R,LN,C,S,DEL
       INTEGER ATMS(1,*)
       DIMENSION XYZ(3,*)
 **********************************************************************
@@ -517,15 +530,15 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
       XP(2)=XP(2)/LN
       XP(3)=XP(3)/LN
       YP(1)=ZP(2)*XP(3)-ZP(3)*XP(2)
-      YP(2)=ZP(3)*XP(1)-ZP(1)*ZP(3)
+      YP(2)=ZP(3)*XP(1)-ZP(1)*XP(3)
       YP(3)=ZP(1)*XP(2)-ZP(2)*XP(1)
       CALL DIHED(XYZ,I,J,K,L,DEL)
       DEL=ANGL-DEL
       DO 10 II=1,SIZE(ATMS,1)
-        JI(1)=XYZ(1,ATMS(1,II))-XYZ(1,J)
-        JI(2)=XYZ(2,ATMS(1,II))-XYZ(2,J)
-        JI(3)=XYZ(3,ATMS(1,II))-XYZ(3,J)
-        LN=DOT_PRODUCT(JI,ZP)
+        JII(1)=XYZ(1,ATMS(1,II))-XYZ(1,J)
+        JII(2)=XYZ(2,ATMS(1,II))-XYZ(2,J)
+        JII(3)=XYZ(3,ATMS(1,II))-XYZ(3,J)
+        LN=DOT_PRODUCT(JII,ZP)
         OP(1)=XYZ(1,J)+ZP(1)*LN
         OP(2)=XYZ(2,J)+ZP(2)*LN
         OP(3)=XYZ(3,J)+ZP(3)*LN
@@ -539,8 +552,5 @@ C      ROTATE KJ AROUND THE X AXIS SO KJ LIES ALONG THE Z AXIS
         XYZ(2,ATMS(1,II))=OP(2)+R*(C*XP(2)+S*YP(2))
         XYZ(3,ATMS(1,II))=OP(3)+R*(C*XP(3)+S*YP(3))
    10  CONTINUE
-
-
-
       RETURN
       END
