@@ -28,18 +28,19 @@
       COMMON /ATOMTX/ LTXT, TXTATM(NUMATM)
       COMMON /KEYWRD/ KEYWRD
 C       Laurent Modification
-      COMMON /CNSTR / ICONXN, IVAL, APPLIED, INFINT
+      COMMON /CNSTR / ICONXN, APPLIED, INFINT
 C       End Laurent
       DIMENSION ISTART(40), XYZ(3,NUMATM), VALUE(4)
 C       Laurent Modification
       INTEGER ICONXN(6,NUMATM),CONX(4)
       DOUBLE PRECISION IVAL(3,NUMATM),INFINT
+      DOUBLE PRECISION TMPC(8)
 C       End Laurent
       LOGICAL LEADSP, IRCDRC, APPLIED
       CHARACTER KEYWRD*241, TXTATM*8, SIMBOL*10, LTXT*1
       CHARACTER ELEMNT(107)*2, LINE*80, SPACE*1, NINE*1,ZERO*1,
      1TAB*1, COMMA*1, STRING*80, ELE*2, TURN*1
-      DOUBLE PRECISION TMPC(8)
+
       SAVE ELEMNT, COMMA, SPACE, NINE, ZERO
       DATA (ELEMNT(I),I=1,107)/'H','HE',
      1 'LI','BE','B','C','N','O','F','NE',
@@ -65,7 +66,7 @@ C       End Laurent
       NATOMS=0
       NUMAT=0
       ISERR=0
-C             Laurent Modification
+C             Laurent Modif  ication
       APPLIED=.FALSE.
       DO 400 I=1,NUMATM
         DO 410 J=1,3
@@ -83,7 +84,8 @@ C       Added
        IF(INDEX(KEYWRD,'ALTCON').EQ.0)THEN
        GOTO 130
        ELSE
-       GOTO 270
+       CALL RALTCON(IREAD,LOPT)
+       GOTO 130
        ENDIF
       ENDIF
 C       End Laurent
@@ -289,108 +291,6 @@ C
          RETURN
       ENDIF
       GOTO 20
-C       Laurent Modification: Reading-in of alternate constraints
-  270 READ(IREAD,'(A)',END=130,ERR=230)LINE
-      IF(LINE.EQ.' ') GOTO 130
-
-
-      LEADSP=.TRUE.
-      NVALUE=0
-      DO 280 I=1,80
-         IF (LEADSP.AND.LINE(I:I).NE.SPACE) THEN
-            NVALUE=NVALUE+1
-            ISTART(NVALUE)=I
-         END IF
-         LEADSP=(LINE(I:I).EQ.SPACE)
-  280 CONTINUE
-
-      TMPC(7)=0
-      DO 290 I=1,6
-       TMPC(I)=0
-       TMPC(I)=READN(LINE,ISTART(I))
-       IF(TMPC(7).EQ.0.AND.TMPC(I).EQ.0)TMPC(7)=I
-
-  290 CONTINUE
-
-
-      IF(TMPC(7).EQ.3) THEN
-       GOTO 300
-      ELSEIF(TMPC(7).EQ.4) THEN
-       GOTO 310
-      ELSEIF(TMPC(7).EQ.5) THEN
-       GOTO 320
-      ENDIF
-
-
-  300 IF(TMPC(1).GT.TMPC(2))THEN
-      TMPC(3)=TMPC(2)
-      TMPC(2)=TMPC(1)
-      TMPC(1)=TMPC(3)
-      ENDIF
-      CONX(1)=INT(TMPC(1))
-      CONX(2)=INT(TMPC(2))
-      IF(ICONXN(1,CONX(2)).EQ.0.OR.ICONXN(1,CONX(2)).EQ.CONX(1))THEN
-        ICONXN(1,CONX(2))=CONX(1)
-        ICONXN(4,CONX(2))=1
-        IF(INDEX(LINE,'F').NE.0)THEN
-            LOPT(1,CONX(2))=0
-            IF(TMPC(4).NE.0) IVAL(1,CONX(2))=TMPC(4)
-        ELSEIF(INDEX(LINE,'S').NE.0.AND.TMPC(4).NE.0)THEN
-            IVAL(1,CONX(2))=TMPC(4)
-        ENDIF
-      ELSE
-        GOTO 330
-      ENDIF
-      GOTO 270
-
-C       Laurent: Reordering still needs to be implemented
-  310 CONX(1)=INT(TMPC(1))
-      CONX(2)=INT(TMPC(2))
-      CONX(3)=INT(TMPC(3))
-      IF((ICONXN(2,CONX(3)).EQ.0.OR.ICONXN(2,CONX(3)).EQ.CONX(1))
-     1.AND.(ICONXN(1,CONX(3)).EQ.0.OR.ICONXN(1,CONX(3)).EQ.CONX(2)))THEN
-        ICONXN(2,CONX(3))=CONX(1)
-        ICONXN(1,CONX(3))=CONX(2)
-        ICONXN(5,CONX(3))=1
-        IF(INDEX(LINE,'F').NE.0)THEN
-            LOPT(2,CONX(3))=0
-            IF(TMPC(5).NE.0)IVAL(2,CONX(3))=TMPC(5)
-        ELSEIF(INDEX(LINE,'S').NE.0.AND.TMPC(5).NE.0)THEN
-             IVAL(2,CONX(3))=TMPC(5)
-        ENDIF
-      ELSE
-        GOTO 330
-      ENDIF
-
-      GOTO 270
-C       Laurent: Reordering still needs to be implemented
-  320 CONX(1)=INT(TMPC(1))
-      CONX(2)=INT(TMPC(2))
-      CONX(3)=INT(TMPC(3))
-      CONX(4)=INT(TMPC(4))
-      IF((ICONXN(3,CONX(4)).EQ.0.OR.ICONXN(3,CONX(4)).EQ.CONX(1))
-     1.AND.(ICONXN(2,CONX(4)).EQ.0.OR.ICONXN(2,CONX(4)).EQ.CONX(2))
-     2.AND.(ICONXN(1,CONX(4)).EQ.0.OR.ICONXN(1,CONX(4)).EQ.CONX(3)))THEN
-        ICONXN(3,CONX(4))=CONX(1)
-        ICONXN(2,CONX(4))=CONX(2)
-        ICONXN(1,CONX(4))=CONX(3)
-        ICONXN(6,CONX(4))=1
-        IF(INDEX(LINE,'F').NE.0)THEN
-            LOPT(3,CONX(4))=0
-            IF(TMPC(6).NE.0)IVAL(3,CONX(4))=TMPC(6)
-        ELSEIF(INDEX(LINE,'S').NE.0.AND.TMPC(6).NE.0)THEN
-            IVAL(3,CONX(4))=TMPC(6)
-        ENDIF
-      ELSE
-        GOTO 330
-      ENDIF
-      GOTO 270
-
-      GOTO 270
-
-  330 WRITE(6,'(A)')'Impossible Gemoetric Constraints:', LINE
-      STOP
-C       End Laurent
 *
 * ALL DATA READ IN, CLEAN UP AND RETURN
 *

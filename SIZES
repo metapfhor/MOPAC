@@ -35,6 +35,7 @@ C     PARAMETER (MAXHEV=250, MAXLIT=200)
 ************************************************************************
       PARAMETER (VERSON=7.00D0)
       PARAMETER (NUMATM=MAXHEV+MAXLIT)
+      PARAMETER (MAXCHAR=80)
       PARAMETER (MAXORB=4*MAXHEV+MAXLIT)
       PARAMETER (MAXPAR=3*NUMATM)
       PARAMETER (MAXBIG=MAXORB*MAXORB*2)
